@@ -1,0 +1,46 @@
+POST http://localhost:5000/register/
+Content-Type: application/json
+
+{
+    "id": "11",
+    "username":"satyas",
+    "password":"sai@007",
+    "email":"sai@gmail.com",
+    "number":"1234567890"
+}
+
+###
+POST http://localhost:5000/login/
+Content-Type: application/json
+
+{
+    "username":"satyas",
+    "password":"sai@007"
+}
+
+###
+
+GET http://localhost:5000/user_data/?username=sai
+
+
+###
+POST http://localhost:5000/user_input/
+Content-Type: application/json
+
+{
+    "id": "08d-4c03-b4c4-8947abb838b",
+    "user_id":"a0f606d3-687c-4b22-8745-94bf23bdffe4",
+    "username":"Veera Venkata Sai Varma",
+    "email":"saivarma@gmail.com",
+    "location":"vuyyuru",
+    "occupation":"engineer"
+}
+###
+
+DELETE http://localhost:5000/delete/15981d-808d-4c03-b4c4-8947abb838b
+
+###
+DELETE http://localhost:5000/delete
+
+###
+GET http://localhost:5000/user
