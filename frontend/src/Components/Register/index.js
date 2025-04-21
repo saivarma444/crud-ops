@@ -3,10 +3,11 @@ import {v4 as uuidv4} from 'uuid'
 import { Navigate } from 'react-router-dom';
 import { IoMdEye } from "react-icons/io";
 import { IoIosEyeOff } from "react-icons/io";
+import {GoogleLogin} from "@react-oauth/google"
 import {Label,Input,Container,Form,LoginButton,Select, SeeButton,InputPassword,LabelEmail,LabelNumber} from "./styledComponents"
 
 class Register extends Component{
-    state = {username:"",password:"",email:"",number:"",errMsg:"",isShown:false,shouldRedirect:false}
+    state = {username:"",password:"",email:"",number:"",errMsg:"",isShown:false,shouldRedirect:false }
 
 
     changevalueLogin = (event) => {
@@ -31,6 +32,11 @@ class Register extends Component{
 
     getNumber = event => {
         this.setState({number:event.target.value})
+    }
+
+    redirectToGoogle = () => {
+        window.location.href = "http://localhost:5000/auth/google"
+        this.setState({shouldRedirect:true})
     }
 
     submitData = async event => {
@@ -104,6 +110,10 @@ class Register extends Component{
                     <Input type="number" value={number} placeholder='Mobile Number' id="numberer" onChange={this.getNumber}/>
                     <LoginButton type="submit">Submit</LoginButton>
                     <p className='error'>{errorMsg}</p>
+                    <GoogleLogin
+                        onSuccess={this.redirectToGoogle}
+                        onError={()=>alert("google sign-up failed")}
+                    />
                 </Form>
             </Container>
         )
