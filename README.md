@@ -1,7 +1,7 @@
-Run the Node.js
+Run the Node.js:
 To Run the backend first use cd backend and use nodemon app.js to run the backend
 
-Run the React.js
+Run the React.js:
 To run the react.js first use cd frontend and use npm start
 
 Backend:
