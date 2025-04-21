@@ -5,12 +5,54 @@ const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const path = require("path")
 const cors = require("cors")
-const { checkPrime } = require("crypto")
-const { unsubscribe } = require("diagnostics_channel")
+const session = require("express-session");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const { v4: uuidv4 } = require("uuid");
+
 
 const app = express()
 app.use(express.json())
 app.use(cors())
+app.use(session({
+    secret:"my_secret_key",
+    resave:false,
+    saveUninitialized:true,
+}))
+app.use(passport.initialize())
+app.use(passport.session())
+
+
+passport.use(new GoogleStrategy({
+    clientID:"331613423535-f2pqt2o1re3btj79lv0b99joc693siu4.apps.googleusercontent.com",
+    clientSecret:"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",
+    callbackURL:"http://localhost:5000/auth/google/callback"
+},
+async (accessToken,refereshToken,profile,done)=>{
+    const email = profile.emails[0].value
+    const username = profile.displayName
+    const number= "0000000000"
+    const id = uuidv4()
+
+    const userQuery = `select * from register where email=?`
+    const isRegistered = await db.get(userQuery,[email])
+
+    if(!isRegistered){
+        const query = `
+            INSERT INTO register(id,username,password,email,number) values(?,?,?,?,?);    
+        `
+        await db.run(query, [id,username,"google-auth",email,number])
+    }
+    return done(null, {email})
+}
+))
+
+passport.serializeUser((user, done) => {
+    done(null, user);
+  });
+  passport.deserializeUser((obj, done) => {
+    done(null, obj);
+  });
 
 const dbPath = path.join(__dirname,"myDatabase")
 
@@ -33,42 +75,12 @@ const initilizeServer = async () =>{
 
 initilizeServer()
 
-const checkDetails = (request,response,next)=>{
-    const {username,email,number,password} = request.body
-    const regex = /\d/
-    const regex2 = /^[0-9]+$/
-    if(username===undefined){
-        response.json({message:"Please enter username"})
-    }else if(password===undefined){
-        response.json({message:"please enter a password"})
-    }else if(email===undefined){
-        response.json({message:"Please enter email"})
-    }else if(number===undefined){
-        response.json({message:"please enter a number"})
-    }
-    else if(username.length>14 && regex.test(username)){
-        response.json({message:"username is above 14 characters and contains numbers"})
-    }
-    else if(username.length>14){
-        response.json({message:"username is above 14 characters"})
-    }else if(regex.test(username)){
-        response.json({message:"username contains numbers"})
-    }else if(!email.endsWith("@gmail.com")){
-        response.json({message:"Invalid email address"})
-    }else if(number.length!==10){
-        response.json({message:"Invalid Number"})
-    }else if (!regex2.test(number)){
-        response.json({message:"Number contains strings"})
-    }else{
-        next()
-    }
-}
+
 
    
 
 app.post("/register/",async (request,response)=>{
     const {id,username,password,email,number} = request.body
-    console.log("Received password from frontend:", password);
     const regex = /\d/
     const regex2 = /^[0-9]+$/
     if(username.length>14 && regex.test(username)){
@@ -108,10 +120,8 @@ app.post("/login/", async (request,response)=>{
     if(result===undefined){
         response.json({message:"username doesn't exist"})
     }else{
-        console.log(result.password)
-        console.log(password)
+        
         const checkPassword = await bcrypt.compare(password,result.password)
-        console.log(checkPassword)
         if(checkPassword===true){
             const payload = {
                 username: username
@@ -133,16 +143,28 @@ app.get("/user", async(request,response)=>{
 
 
 app.get("/user_data/",async (request,response)=>{
-    const {username} =  request.query
-    console.log(username)
-    const getUserId =   `select id from register where username="${username}";`
-    const id = await db.get(getUserId)
-    console.log(id.id)
-    if(id!==undefined){
-        const userInputData = `select * from user where user_id="${id.id}";`;
-        const userData = await db.all(userInputData)
-        console.log(userData)
-        response.json({data:userData,id:id.id})
+    const {username,email} =  request.query
+       if(username!==undefined && email!==undefined){
+        console.log(username,email)
+        const getUserId =   `select id from register where username="${username}";`
+        const id = await db.get(getUserId)
+        if(id!==undefined){
+            const userInputData = `select * from user where user_id="${id.id}";`;
+            const userData = await db.all(userInputData)
+            response.json({data:userData,id:id.id})
+        }
+       }
+        if(email!==undefined && username===undefined){
+        console.log(username,email)
+        const getUserIdFromemail = `select id from register where email=?;`
+        const resultForMail  = await db.get(getUserIdFromemail,[email])
+        console.log(resultForMail)
+        if(resultForMail!==undefined){
+            const userInputData = `select * from user where user_id="${id.id}";`;
+            const userData = await db.all(userInputData)
+            response.json({data:userData,id:id.id})
+            console.log(userData)
+        }
     }
 })
 
@@ -172,7 +194,6 @@ app.post("/user_input", async (request,response)=>{
     "${number}"
     );`
     const v = await db.run(query)
-    console.log(v)
     response.status(200).json({message:"success"})
     }
 })
@@ -205,3 +226,43 @@ app.delete("/delete/", async (request,response)=>{
     await db.run(query2)
     response.send("data successfully deleted")
 })
+
+app.get("/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
+  
+  app.get("/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    async (req, res) => {
+      const userQuery = `select * from register where email=?;`
+      const user = await db.get(userQuery)
+      if (!user) {
+        return res.redirect("http://localhost:3000/login?error=UserNotFound");
+    }
+      const payload = {username:user.username, email: user.email,id:user.id };
+      const token = jwt.sign(payload, "My_Secret_Token", { expiresIn: "2d" });
+      res.redirect(`http://localhost:3000/login?token=${token}&email=${user.email}&id=${user.id}`);
+    }
+  );
+  
+
+  app.post("/google-login/", async (request,response)=>{
+    const {email} = request.body
+    const isUserregistered = `select * from register where email=?`
+    const userData = await db.get(isUserregistered,[email])
+
+    if(userData!==undefined){
+        const payload = {
+            username:isUserregistered.username,
+            email:isUserregistered.email
+        }
+        const token = jwt.sign(payload,"My_Secret_Token", {expiresIn: "2d"})
+        response.status(200).json({
+            message:"success",
+            token,
+            username:userData.username
+        })
+    }else{
+        response.json({message:"User not registered"})
+    }
+  })
