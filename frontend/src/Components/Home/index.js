@@ -13,9 +13,13 @@ class Home extends Component{
 
     getData = async () => {
         const username = Cookies.get('username')
+        const userId = Cookies.get('user_id')
         const encodeUserName = encodeURIComponent(username)
+        const mail = Cookies.get('email')
+        console.log(mail)
+        console.log(userId)
         console.log(encodeUserName)
-        const url = `http://localhost:5000/user_data/?username=${encodeUserName}`
+        const url = `http://localhost:5000/user_data/?username=${encodeUserName}&email=${mail}`
         const options = {
             method: "GET"
         }
@@ -40,6 +44,10 @@ class Home extends Component{
     render(){
         const {moveBack,goTOAddSection,displayData} = this.state
         console.log(displayData)
+        const token = Cookies.get('jwt_token')
+        if(token===undefined){
+            return <Navigate to="/login" replace/>
+        }
         if(goTOAddSection){
             return <Navigate to='/details_form' replace/>
         }
