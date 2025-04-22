@@ -97,15 +97,22 @@ app.post("/register/",async (request,response)=>{
     }else if (!regex2.test(number)){
         response.json({message:"Number contains strings"})}
     else{
-    const hashPassword = await bcrypt.hash(password,10)
-    console.log(hashPassword)
-    const query = `
-        insert into register(id,username,password,email,number) VALUES(
-        ?,?,?,?,?
-        );
-    `;
-     const datas = await db.run(query,[id,username,hashPassword,email,number])
-    response.status(200).json({message:"success",datas})}
+        const checkIfExists = `select * from register where username=?;`
+        const resultData = await db.get(checkIfExists,[username])
+        console.log(resultData)
+        if(resultData===undefined){
+            const hashPassword = await bcrypt.hash(password,10)
+        const query = `
+            insert into register(id,username,password,email,number) VALUES(
+            ?,?,?,?,?
+            );
+        `;
+         const datas = await db.run(query,[id,username,hashPassword,email,number])
+        response.status(200).json({message:"success",datas})
+    }else{
+            response.json({message:"username already exists"})
+        }
+    }
 })
 
 app.post("/login/", async (request,response)=>{
@@ -145,7 +152,7 @@ app.get("/user", async(request,response)=>{
 app.get("/user_data/",async (request,response)=>{
     const {username,email} =  request.query
        if(username!==undefined && email!==undefined){
-        console.log(username,email)
+        
         const getUserId =   `select id from register where username="${username}";`
         const id = await db.get(getUserId)
         if(id!==undefined){
@@ -155,15 +162,15 @@ app.get("/user_data/",async (request,response)=>{
         }
        }
         if(email!==undefined && username===undefined){
-        console.log(username,email)
+        
         const getUserIdFromemail = `select id from register where email=?;`
         const resultForMail  = await db.get(getUserIdFromemail,[email])
-        console.log(resultForMail)
+        
         if(resultForMail!==undefined){
             const userInputData = `select * from user where user_id="${id.id}";`;
             const userData = await db.all(userInputData)
             response.json({data:userData,id:id.id})
-            console.log(userData)
+            
         }
     }
 })
@@ -196,6 +203,7 @@ app.post("/user_input", async (request,response)=>{
     const v = await db.run(query)
     response.status(200).json({message:"success"})
     }
+
 })
 
 app.delete("/delete/:id",async (request,response)=>{
@@ -207,6 +215,13 @@ app.delete("/delete/:id",async (request,response)=>{
 
 app.put("/update/", async (request,response)=>{
     const {id,user_id,username,email,location,gender,occupation,number} = request.body
+    if(!email.endsWith("@gmail.com")){
+        response.json({message:"please enter a valid email"})
+
+    }else if(number.length!==10){
+        response.json({message:"Please enter a valid number"})
+    }
+    else{
     const query = `update user set
     user_id="${user_id}",
     username="${username}",
@@ -217,6 +232,7 @@ app.put("/update/", async (request,response)=>{
     number="${number}" where id="${id}";`
     await db.run(query)
     response.status(200).json({message:"success"})
+    }
 }) 
 
 app.delete("/delete/", async (request,response)=>{
