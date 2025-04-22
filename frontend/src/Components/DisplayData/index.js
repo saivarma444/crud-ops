@@ -15,6 +15,7 @@ const DisplayData = ({ datas, onDelete, onUpdate }) => {
     const [occupations, setOccupation] = useState(occupation);
     const [numbers, setNumber] = useState(number);
     const [genders, setGender] = useState(gender);
+    const [errMsg,setErrorMsg] = useState("Male")
 
     
     const editTheData = () => {
@@ -52,12 +53,13 @@ const DisplayData = ({ datas, onDelete, onUpdate }) => {
             body: JSON.stringify(newData)
         };
         const response = await fetch(url, options);
-        console.log(response)
         if(response.ok===true){
             const responseData = await response.json()
             if(responseData.message==="success"){
                 setChange(false)
                 onUpdate()
+            }else{
+                setErrorMsg(responseData.message)
             }
         }
         
@@ -71,9 +73,14 @@ const DisplayData = ({ datas, onDelete, onUpdate }) => {
         onDelete();
     };
 
+    const changeGender = event => {
+        setGender(event.target.value)
+    }
+
     
     const renderData = () => {
         if (isChanged===false) {
+
             return (
                 <Li>
                     <DIV>
@@ -110,8 +117,13 @@ const DisplayData = ({ datas, onDelete, onUpdate }) => {
                     <label htmlFor="numbe">Number</label>
                     <input type="number" id="numbe" value={numbers} onChange={(e) => setNumber(e.target.value)} />
                     <label htmlFor="gende">Gender</label>
-                    <input type="text" id="gende" value={genders} onChange={(e) => setGender(e.target.value)} />
+                    <select id="gende" onChange={changeGender}>
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                    </select>
                     <EditButton type="submit">Update</EditButton>
+                    <p className="error">{errMsg}</p>
                 </form>
             );
         }
